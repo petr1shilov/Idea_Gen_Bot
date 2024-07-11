@@ -118,29 +118,39 @@ class IdeaGenAPI:
 
     def get_answer(self, agents, them, len_dialog: int):
 
+        content = []
+        count = 1
+        total_tokens = 0
+
         response = self.check_auth_token()
         if response != -1:
             giga_token = response.json()["access_token"]
 
         agents = self.parsing_agents(agents)
 
-        content = []
+        system_prompt = f'Представь что это брейншторм {len(agents)} людей на тему: {them}.\n\n'
+        for agent in agents:
+            text = f'''Специалист номер {count} - Тебя зовут {agent}. Ты {agents[agent]} 
+            Ты участвуешь в научном брейншторме на тему {them} вместе с:
+            {set(agents) - set([agent])}. 
+            Все специалисты говорят по очереди.\n\n'''
+    
+            system_prompt += text
+            count += 1
 
         conversation_history = [
             {
                 "role": "system",
-                "content": f"Представь что это брейншторм {len(agents)} людей на тему: {them}",
+                "content": system_prompt,
             }
         ]
         for _ in range(len_dialog):
             for agent in agents:
                 prompt = f"""
-                Тебя зовут {agent}. Ты {agents[agent]}. 
-                Ты участвуешь в научном брейншторме на тему {them} вместе с:
-                {set(agents) - set([agent])}. 
-                Все агенты говорят по очереди, сейчас твоя очередь.
-                Дополни, покритикуй или предложи альтернативу обсуждаемым идеям.
-                История диалога: {conversation_history}."""
+                Cейчас очередь {agent}.
+                Дополни, покритикуй или предложи альтернативу обсуждаемым идеям на ответы предыдущего специалиста.
+                Твой ответ должен быть 1-2 предложения. В каждом предожении примерно 7 слов.
+                Не забывай обращаться к совему собеседнику."""
                 conversation_history.append({"role": "user", "content": prompt})
 
                 answer = self.get_chat_completion(giga_token, conversation_history)
@@ -154,13 +164,14 @@ class IdeaGenAPI:
                 content.append(
                     {agent: answer.json()["choices"][0]["message"]["content"]}
                 )
+                total_tokens += int(answer.json()['usage']['total_tokens'])
                 # print(conversation_history)
                 # print(answer.json()['choices'][0]['message']['content'])
 
         takeoffs_system_prompt = f"""Ты опытный ученый, который подводит итог научного диспута на тему:{them}. 
                     В диалоге участвуют: {agents}. 
                     Текст диалога: 
-                        начало диалога: {conversation_history} 
+                        начало диалога: {content} 
                         конец диалога. 
                     Сформируй нумерованный список ценных идей, озвученых в диалоге, приведи не менее 1 идеи."""
         conversation_history_takeoffs = [
@@ -169,5 +180,9 @@ class IdeaGenAPI:
         answer_total = self.get_chat_completion(
             giga_token, conversation_history_takeoffs
         )
+
+        total_tokens += int(answer_total.json()['usage']['total_tokens'])
+        print(f'всего было потрачего --> {total_tokens} токенов на {len((agents * 2) + 1)} реплик')
+        print(conversation_history)
 
         return content, answer_total.json()["choices"][0]["message"]["content"]

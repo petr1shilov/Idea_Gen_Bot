@@ -53,16 +53,15 @@ async def command_start_handler(message: Message, state: FSMContext) -> None:
             button_text_them,button_text_instrustion]))
 async def button_taped(message: Message, state: FSMContext):
     if message.text == button_text_gen:
-        await message.answer(message.text)
         await message.answer(text_for_gen)
         user_data = await state.get_data()
         agents = user_data["agents"]
         them = user_data["them"]
         dialog_len = user_data["dialog_len"]
-        convers_history, answer = api.get_answer(agents, them, dialog_len)
-        for mes in convers_history:
-            await message.answer(mes)
-        await message.answer(answer)
+        convers_history, total_answer = api.get_answer(agents, them, dialog_len)
+        for answer in convers_history:
+            await message.answer(f'{list(answer.keys())[0]}\n{list(answer.values())[0]}\n')
+        await message.answer(total_answer)
 
     elif message.text == button_text_agents:
         await message.answer(message.text)
