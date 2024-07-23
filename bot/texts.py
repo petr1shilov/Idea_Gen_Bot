@@ -21,6 +21,5 @@ text_for_them = 'Введите тему диалога ботов, в своб�
 text_for_gen = 'Идет обсуждение, пожалуйста подождите'
 text_for_model_select = 'Выберете модель'
 
-button_text_model_1 = 'ChatGPT4'
+button_text_model_1 = 'GPT-4o'
 button_text_model_2 = 'GigaChat'
-
