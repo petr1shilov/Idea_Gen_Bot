@@ -44,15 +44,15 @@ async def command_start_handler(message: Message, state: FSMContext) -> None:
 
 
 @dp.message(F.text.in_([button_text_gen, button_text_agents,button_text_dialog_len,
-            button_text_them]))
+            button_text_theme]))
 async def button_taped(message: Message, state: FSMContext):
     if message.text == button_text_gen:
         await message.answer(text_for_gen)
         user_data = await state.get_data()
         agents = user_data["agents"]
-        them = user_data["them"]
+        theme = user_data["theme"]
         dialog_len = user_data["dialog_len"]
-        convers_history, total_answer = api.get_answer(agents, them, dialog_len)
+        convers_history, total_answer = api.get_answer(agents, theme, dialog_len)
         for answer in convers_history:
             await message.answer(f'{list(answer.keys())[0]}\n{list(answer.values())[0]}\n')
         await message.answer(total_answer)
@@ -63,14 +63,14 @@ async def button_taped(message: Message, state: FSMContext):
     elif message.text == button_text_dialog_len:
         await message.answer(text_for_dialog_len)
         await state.set_state(UserStates.get_len)
-    elif message.text == button_text_them:
-        await message.answer(text_for_them)
-        await state.set_state(UserStates.get_them)
+    elif message.text == button_text_theme:
+        await message.answer(text_for_theme)
+        await state.set_state(UserStates.get_theme)
 
-@dp.message(F.text == button_text_model)
-async def get_model(message: Message, state: FSMContext):
-    await message.answer(text_for_model_select, reply_markup=model_kb)
-    await state.set_state(UserStates.get_model)
+# @dp.message(F.text == button_text_model)
+# async def get_model(message: Message, state: FSMContext):
+#     await message.answer(text_for_model_select, reply_markup=model_kb)
+#     await state.set_state(UserStates.get_model)
 
 
 @dp.message(StateFilter(UserStates.get_agents), F.content_type == "text")
@@ -88,10 +88,10 @@ async def get_len(message: Message, state: FSMContext):
     await message.answer(f'Вы ввели длину = {text_messege}')
 
 
-@dp.message(StateFilter(UserStates.get_them), F.content_type == "text")
-async def get_them(message: Message, state: FSMContext):
+@dp.message(StateFilter(UserStates.get_theme), F.content_type == "text")
+async def get_theme(message: Message, state: FSMContext):
     text_messege = message.text
-    await state.update_data(them=text_messege)
+    await state.update_data(theme=text_messege)
     await message.answer(f'Тема диалога: {text_messege}')
 
 @dp.message(StateFilter(UserStates.get_model), F.text.in_([button_text_model_1, button_text_model_2]))

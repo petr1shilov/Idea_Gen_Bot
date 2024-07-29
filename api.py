@@ -123,7 +123,7 @@ class IdeaGenAPI:
             print(f"Произошла ошибка: {str(e)}")
             return None
 
-    def get_answer_giga(self, agents, topic, len_dialog: int):
+    def get_answer_giga(self, agents, theme, len_dialog: int):
 
         content = []
         count = 1
@@ -135,13 +135,13 @@ class IdeaGenAPI:
 
         agents = self.parsing_agents(agents)
 
-        system_prompt = f'Представь что это брейншторм {len(agents)} людей на тему: {topic}.\n\n'
+        system_prompt = f'Представь что это брейншторм {len(agents)} людей на тему: {theme}.\n\n'
         for agent in agents:
-            text = f'''Специалист номер {count} - Тебя зовут {agent}. Ты {agents[agent]}
-            Ты участвуешь в научном брейншторме на тему {topic} вместе с:
-            {set(agents) - set([agent])}.
+            text = f'''Специалист номер {count} - Тебя зовут {agent}. Ты {agents[agent]} 
+            Ты участвуешь в научном брейншторме на тему {theme} вместе с:
+            {set(agents) - set([agent])}. 
             Все специалисты говорят по очереди.\n\n'''
-
+    
             system_prompt += text
             count += 1
 
@@ -156,7 +156,7 @@ class IdeaGenAPI:
                 prompt = f"""
                 Cейчас очередь {agent}.
                 Дополни, покритикуй или предложи альтернативу обсуждаемым идеям на ответы предыдущего специалиста.
-                Твой ответ должен быть 1-2 предложения. В каждом предожении примерно 7 слов. Скажи только саму реплику, не начинай с имени {agent}.
+                Твой ответ должен быть 1-2 предложения. В каждом предожении примерно 7 слов.
                 """
                 conversation_history.append({"role": "user", "content": prompt})
 
@@ -175,11 +175,11 @@ class IdeaGenAPI:
                 # print(conversation_history)
                 # print(answer.json()['choices'][0]['message']['content'])
 
-        takeoffs_system_prompt = f"""Ты опытный ученый, который подводит итог научного диспута на тему:{topic}.
-                    В диалоге участвуют: {agents}.
-                    Текст диалога:
-                        начало диалога: {content}
-                        конец диалога.
+        takeoffs_system_prompt = f"""Ты опытный ученый, который подводит итог научного диспута на тему:{theme}. 
+                    В диалоге участвуют: {agents}. 
+                    Текст диалога: 
+                        начало диалога: {content} 
+                        конец диалога. 
                     Сформируй нумерованный список ценных идей, озвученых в диалоге, приведи не менее 1 идеи."""
         conversation_history_takeoffs = [
             {"role": "system", "content": takeoffs_system_prompt}
@@ -193,29 +193,32 @@ class IdeaGenAPI:
         print(conversation_history)
 
         return content, answer_total.json()["choices"][0]["message"]["content"]
-
+    
     def get_gpt4_completion(self, conversation_history):
         response = self.client.chat.completions.create(
             model="gpt-4o",
             messages=conversation_history
             )
         return response
-
-    def get_answer_gpt4(self, agents, topic, len_dialog: int):
+    
+    def get_answer_gpt4(self, agents, theme, len_dialog: int):
 
         content = []
         count = 1
         total_tokens = 0
+        first_messege = True
+        total_prompt_tokens = 0
+        total_completion_tokens = 0
 
         agents = self.parsing_agents(agents)
 
-        system_prompt = f'Представь что это брейншторм {len(agents)} людей на тему: {topic}.\n\n'
+        system_prompt = f'Представь что это брейншторм {len(agents)} людей на тему: {theme}.\n\n'
         for agent in agents:
-            text = f'''Специалист номер {count} - Тебя зовут {agent}. Ты {agents[agent]}
-            Ты участвуешь в научном брейншторме на тему {topic} вместе с:
-            {set(agents) - set([agent])}.
+            text = f'''Специалист номер {count} - Тебя зовут {agent}. Ты {agents[agent]} 
+            Ты участвуешь в научном брейншторме на тему {theme} вместе с:
+            {set(agents) - set([agent])}. 
             Все специалисты говорят по очереди.\n\n'''
-
+    
             system_prompt += text
             count += 1
 
@@ -227,11 +230,20 @@ class IdeaGenAPI:
         ]
         for _ in range(len_dialog):
             for agent in agents:
-                prompt = f"""
-                Cейчас очередь {agent}.
-                Дополни, покритикуй или предложи альтернативу обсуждаемым идеям на ответы предыдущего специалиста.
-                Твой ответ должен быть 1-2 предложения. В каждом предожении примерно 7 слов. Скажи только саму реплику, не начинай с имени {agent}.
-                """
+                if first_messege:
+                    prompt = f"""
+                    Cейчас очередь {agent}.
+                    Ты говоришь первым, поэтому не забудь поздароваться.
+                    Начни диалог по теме.
+                    Твой ответ должен быть 1-2 предложения. В каждом предожении примерно 7 слов. Скажи только саму реплику.
+                    """
+                    first_messege = False
+                else:
+                    prompt = f"""
+                    Cейчас очередь {agent}.
+                    Дополни, покритикуй или предложи альтернативу обсуждаемым идеям на ответы предыдущего специалиста.
+                    Твой ответ должен быть 1-2 предложения. В каждом предожении примерно 7 слов. Скажи только саму реплику, не начинай с имени {agent} и не надо здороватся.
+                    """
                 conversation_history.append({"role": "user", "content": prompt})
 
                 answer = self.get_gpt4_completion(conversation_history)
@@ -243,29 +255,36 @@ class IdeaGenAPI:
                     }
                 )
                 content.append({agent: answer.choices[0].message.content})
-                total_tokens += int(answer.usage.total_tokens)
+                total_prompt_tokens += int(answer.usage.prompt_tokens)
+                total_completion_tokens += int(answer.usage.completion_tokens)
                 # print(conversation_history)
                 # print(answer.json()['choices'][0]['message']['content'])
 
-        takeoffs_system_prompt = f"""Ты опытный ученый, который подводит итог научного диспута на тему:{topic}.
-                    В диалоге участвуют: {agents}.
-                    Текст диалога:
-                        начало диалога: {content}
-                        конец диалога.
-                    Сформируй нумерованный список ценных идей, озвученых в диалоге, приведи не менее 1 идеи."""
+        takeoffs_system_prompt = f"""Ты опытный ученый, который подводит итог научного диспута на тему:{theme}. 
+                    В диалоге участвуют: {agents}. 
+                    Текст диалога: 
+                        начало диалога: {content} 
+                        конец диалога. 
+                    Сформируй нумерованный список ценных идей, озвученых в диалоге, приведи не менее 1 идеи.
+                    Не надо упоминать участников диалога в своем ответе"""
         conversation_history_takeoffs = [
             {"role": "system", "content": takeoffs_system_prompt}
         ]
         answer_total = self.get_gpt4_completion(conversation_history_takeoffs)
 
-        total_tokens += int(answer_total.usage.total_tokens)
-        print(f'всего было потрачено --> {total_tokens} токенов на {len(agents) * 2 + 1} реплик')
-        print(conversation_history)
+        total_prompt_tokens += int(answer_total.usage.prompt_tokens)
+        total_completion_tokens += int(answer_total.usage.completion_tokens)
+
+        print((f'всего было потрачено --> {total_prompt_tokens + total_completion_tokens} токенов\n'
+               f'на вход было потрачено --> {total_prompt_tokens}токенов\n' 
+               f'на ответ было потрачено --> {total_completion_tokens}токенов\n' 
+               f' на {len(agents) * len_dialog + 1} реплик'))
+        # print(conversation_history)
 
         return content, answer_total.choices[0].message.content
-
-    def get_answer(self, agents, topic, len_dialog: int):
-        if self.model == 'GPT-4o':
-            return self.get_answer_gpt4(agents, topic, len_dialog)
+    
+    def get_answer(self, agents, theme, len_dialog: int):
+        if self.model == 'ChatGPT4':
+            return self.get_answer_gpt4(agents, theme, len_dialog)
         elif self.model == 'GigaChat':
-            return self.get_answer_giga(agents, topic, len_dialog)
+            return self.get_answer_giga(agents, theme, len_dialog)

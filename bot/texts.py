@@ -12,12 +12,12 @@ start_message_text = (
 button_text_gen = 'Начало генерации'
 button_text_agents = 'Задать агентов'
 button_text_dialog_len = 'Задать длину диалога'
-button_text_them = 'Задать тему диалога'
+button_text_theme = 'Задать тему диалога'
 button_text_model = 'Настойка модели'
 
 text_for_agent = 'Введите агентов в формате:\nТексты, разделенные [AGENT_NAME], описания агентов, где AGENT_NAME - уникальные имена агентов.'
 text_for_dialog_len = 'Введите длину диалога\nПоложительное целое число, количество реплик каждого агента.'
-text_for_them = 'Введите тему диалога ботов, в свободной форме.'
+text_for_theme = 'Введите тему диалога ботов, в свободной форме.'
 text_for_gen = 'Идет обсуждение, пожалуйста подождите'
 text_for_model_select = 'Выберете модель'
 
